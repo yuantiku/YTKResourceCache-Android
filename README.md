@@ -1,0 +1,1 @@
+# YTKResourceCache-Android
