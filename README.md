@@ -19,11 +19,12 @@ You can create your own `CacheResourceLoader`, or use our default implementation
 instead. To create a default `CacheResourceLoader`,
 
 ```kotlin
-val cacheResourceLoader = DefaultCacheResourceLoader.Builder(context)
-  .assetsDirectory("cache")
-  .cacheDirectory(getCacheDirectory())
-  .mappingRule(CustomMappingRule())
-  .build()
+val cacheResourceLoader = DefaultCacheResourceLoader(
+  context,
+  assetsDirectory = "cache",
+  cacheDirectory = getCacheDirectory(),
+  mappingRule = CustomMappingRule()
+)
 ```
 
 The `DefaultCacheResourceLoader` first looks up in the assets directory, then in
