@@ -21,7 +21,7 @@ You can also create your own cache storage like `MemoryCacheStorage` by implemen
 ```kotlin
 interface CacheStorage{
     val cacheReader: CacheResourceReader
-    
+
     val cacheWriter: CacheResourceWriter
 }
 
@@ -30,12 +30,8 @@ interface CacheResourceReader {
 }
 
 interface CacheResourceWriter{
-    fun getStream(url: String): OutputStream
+    fun getStream(url: String): OutputStream?
 }
 ```
 
 The `DefaultCacheResourceReader` first looks up in the assets directory, then in the local cache directory, by a specific mapping rule that maps remote urls to local file paths.  
-
-The `DefaultCacheResourceWriter` use disk file to cache resources.
-
-
