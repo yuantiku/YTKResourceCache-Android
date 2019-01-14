@@ -8,15 +8,13 @@ import java.io.InputStream
  * @author zheng on 12/24/18
  */
 
-class FileResourceLoader(
+class FileResourceReader(
     private val directory: File,
     private val mappingRule: MappingRule
-) : CacheResourceLoader {
+) : CacheResourceReader {
 
-    override fun getCachedResourceStream(url: String?): InputStream? {
-        if (url == null) {
-            return null
-        }
+    override fun getStream(url: String?): InputStream? {
+        if (url == null) return null
         val path = mappingRule.mapUrlToPath(url)
         return try {
             FileInputStream(File(directory, path))
