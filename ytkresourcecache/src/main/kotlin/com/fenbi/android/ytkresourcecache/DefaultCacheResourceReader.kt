@@ -31,11 +31,12 @@ class DefaultCacheResourceReader(
     private val innerLoaders by lazy {
         listOf(
             AssetsResourceReader(context, assetsDirectory ?: "cache", innerMappingRule),
-            FileResourceReader(cacheDir, innerMappingRule))
+            FileResourceReader(cacheDir, innerMappingRule)
+        )
     }
 
-    override fun getStream(url: String): InputStream? {
-        if (!url.isSupported) {
+    override fun getStream(url: String?): InputStream? {
+        if (url == null || !url.isSupported) {
             return null
         }
         innerLoaders.forEach { loader ->
@@ -45,4 +46,5 @@ class DefaultCacheResourceReader(
         }
         return null
     }
+
 }

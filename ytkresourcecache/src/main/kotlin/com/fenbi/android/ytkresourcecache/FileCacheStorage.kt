@@ -1,14 +1,15 @@
 package com.fenbi.android.ytkresourcecache
 
 import android.content.Context
+import android.net.Uri
 import java.io.File
 
 /**
  * Created by yangjw on 2019/1/14.
  */
 open class FileCacheStorage(
-    private val context: Context,
-    val mappingRule: MappingRule = MappingRule.Default,
+    protected val context: Context,
+    protected val mappingRule: MappingRule = MappingRule.Default,
     val cacheDir: String = context.cacheDir.absolutePath
 ) : CacheStorage {
 
@@ -17,8 +18,16 @@ open class FileCacheStorage(
 
     override val cacheWriter: CacheResourceWriter = FileResourceWriter(cacheDir, mappingRule)
 
-    fun clearCache() {
-        File(cacheDir).deleteRecursively()
+    fun getCacheFile(url: String?): File? {
+        if (url == null) {
+            return null
+        }
+
+        val dir = File(cacheDir)
+        if(!dir.exists()){
+            dir.mkdirs()
+        }
+        return File(cacheDir, mappingRule.mapUrlToPath(url))
     }
 
 }

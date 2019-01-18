@@ -13,7 +13,8 @@ class FileResourceReader(
     private val mappingRule: MappingRule
 ) : CacheResourceReader {
 
-    override fun getStream(url: String): InputStream? {
+    override fun getStream(url: String?): InputStream? {
+        if (url == null) return null
         val path = mappingRule.mapUrlToPath(url)
         return try {
             FileInputStream(File(directory, path))

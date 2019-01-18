@@ -26,12 +26,12 @@ interface CacheStorage{
 }
 
 interface CacheResourceReader {
-    fun getStream(url: String): InputStream?
+    fun getStream(url: String?): InputStream?
 }
 
 interface CacheResourceWriter{
-    fun getStream(url: String): OutputStream?
+    fun getStream(url: String?): OutputStream?
 }
 ```
 
-The `DefaultCacheResourceReader` first looks up in the assets directory, then in the local cache directory, by a specific mapping rule that maps remote urls to local file paths.  
+`FileCacheStorage`  use `DefaultCacheResourceReader`  for reading cache and `FileResourceWriter`  for writing cache. The `DefaultCacheResourceReader` first looks up in the assets directory, then in the local cache directory, by a specific mapping rule that maps remote urls to local file paths.  The `FileResourceWriter` use disk file to store cache so make sure your application has `WRITE_EXTERNAL_STORAGE` permission.

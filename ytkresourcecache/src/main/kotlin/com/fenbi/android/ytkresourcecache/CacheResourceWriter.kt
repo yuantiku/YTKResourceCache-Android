@@ -6,5 +6,5 @@ import java.io.OutputStream
  * Created by yangjw on 2019/1/14.
  */
 interface CacheResourceWriter {
-    fun getStream(url: String): OutputStream?
+    fun getStream(url: String?): OutputStream?
 }
