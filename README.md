@@ -55,7 +55,11 @@ resourceDownloader.download(url, object : DownloadCallback{
         
     }
     
-    override fun onFailed() {
+    override fun onFailed(e: Throwable) {
+        
+    }
+    
+    override fun onCanceled() {
         
     }
     
@@ -73,7 +77,11 @@ resourceDownloader.download(urlList: List<String>, object : MutipleDownloadsCall
         
     }
     
-    override fun onUrlFailed(url: String) {
+    override fun onUrlFailed(url: String, e: Throwable) {
+        
+    }
+    
+    override fun onUrlCanceled(url: String) {
         
     }
     
@@ -83,4 +91,10 @@ resourceDownloader.download(urlList: List<String>, object : MutipleDownloadsCall
 })
 ```
 
-Once you use `ResourceDownloader` to download resources from internet, the resource is cached by `CacheWriter`. You can later use `CacheReader`  to quickly get a copy of the resource from cache.
+To cancel a download task, simply use:
+
+```kotlin
+resourceDownloader.cancel(url)
+```
+
+Once you use `ResourceDownloader` to download resources from internet, the resource is cached by `CacheResourceWriter`. You can later use `CacheResourceReader`  to quickly get a copy of the resource from cache.

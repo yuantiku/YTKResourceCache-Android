@@ -1,7 +1,6 @@
 package com.fenbi.android.ytkresourcecache
 
 import android.content.Context
-import android.net.Uri
 import java.io.File
 
 /**
