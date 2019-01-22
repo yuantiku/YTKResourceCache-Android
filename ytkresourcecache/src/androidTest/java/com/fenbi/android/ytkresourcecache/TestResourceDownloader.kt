@@ -5,12 +5,13 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.rule.GrantPermissionRule
 import android.support.test.runner.AndroidJUnit4
 import android.util.Log
-import com.fenbi.android.ytkresourcecache.downloader.DownloadCallback
 import com.fenbi.android.ytkresourcecache.downloader.PauseableOutputStream
 import com.fenbi.android.ytkresourcecache.downloader.ResourceDownloader
 import okhttp3.Dispatcher
+import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,44 +33,78 @@ class TestResourceDownloader {
         , Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
 
+    val cacheStorage = object : FileCacheStorage(InstrumentationRegistry.getContext()) {
+        override val cacheWriter = object : CacheResourceWriter {
+            override fun getStream(url: String?): OutputStream? {
+                if (url == null) return null
+                val path = File(cacheDir, mappingRule.mapUrlToPath(url)).absolutePath
+                return PauseableOutputStream(path)
+            }
+        }
+    }
 
     @Test
     fun testDownloadSingleFile() {
-        val cacheStorage = object : FileCacheStorage(InstrumentationRegistry.getContext()) {
-            override val cacheWriter = object : CacheResourceWriter {
-                override fun getStream(url: String?): OutputStream? {
-                    if (url == null) return null
-                    val path = File(cacheDir, mappingRule.mapUrlToPath(url)).absolutePath
-                    return PauseableOutputStream(path)
-                }
-            }
-        }
-        val resourceDownloader = ResourceDownloader(cacheStorage.cacheWriter) {
-            connectTimeout(10, TimeUnit.SECONDS)
-            dispatcher(Dispatcher(Executors.newFixedThreadPool(4)))
-        }
-        val url = "http://www.ovh.net/files/1Mio.dat"
+        val resourceDownloader = ResourceDownloader(cacheStorage.cacheWriter)
+        val url = "http://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(43).jpg"
         val future = CompletableFuture<Long>()
-        resourceDownloader.download(url, object : DownloadCallback {
-            override fun onSuccess() {
+        resourceDownloader.download(url) {
+            onSuccess = {
                 val file = cacheStorage.getCacheFile(url)
                 assertNotNull(file)
                 future.complete(file?.length())
             }
 
-            override fun onFailed(e: Throwable) {
+            onFailed = { e: Throwable ->
                 throw e
             }
 
-            override fun onCanceled() {
-                throw RuntimeException()
+
+            onCanceled = {
+
             }
 
-            override fun onProgress(loaded: Long, total: Long) {
+            onProgress = { loaded, total ->
                 Log.d("testDownloadSingleFile", "onProgress loaded:$loaded  total:$total")
             }
+        }
+        assertEquals(future.get(120, TimeUnit.SECONDS), 413005)
+    }
 
-        })
-        assertEquals(future.get(120, TimeUnit.SECONDS), 1024 * 1024)
+    @Test
+    fun testDownloadMultiFiles() {
+        val resourceDownloader = ResourceDownloader(cacheStorage.cacheWriter)
+        val urlList = listOf(
+            "http://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(43).jpg",
+            "http://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(41).jpg",
+            "https://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(34).jpg"
+        )
+        val future = CompletableFuture<Long>()
+        resourceDownloader.download(urlList) {
+            onUrlSuccess = {
+                Log.d("testDownloadMultiFiles", "onUrlSuccess url=$it")
+            }
+
+            onUrlFailed = { url: String, e: Throwable ->
+                throw e
+            }
+
+
+            onUrlCanceled = {
+
+            }
+
+            onProgress = {
+                Log.d("testDownloadMultiFiles", "onProgress: $it")
+                val finishSize = it.progressMap.values
+                    .filter { it.first == it.second && it.second > 0 }
+                    .size
+                if (finishSize == urlList.size) {
+                    val sum = it.progressMap.values.map { it.second }.sum()
+                    future.complete(sum)
+                }
+            }
+        }
+        assertEquals(future.get(300, TimeUnit.SECONDS), 413005 + 297010 + 240075)
     }
 }

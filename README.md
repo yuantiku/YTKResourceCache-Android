@@ -46,55 +46,48 @@ YTKResourceCache offers you the ability to download resource via internet, you c
 
 ```kotlin
 val url = "http://..."     // A url points to some resource
-val resourceDownloader = ResourceDownloader(
-            cacheWriter = cacheStorage.cacheWriter,
-            threadPool = Executors.newFixedThreadPool(4),
-            connectTimeout = 10*1000)
-resourceDownloader.download(url, object : DownloadCallback{
-    override fun onSuccess() {
+val resourceDownloader = ResourceDownloader(cacheStorage.cacheWriter)
+resourceDownloader.download(url){
+    onSuccess = {
         
     }
-    
-    override fun onFailed(e: Throwable) {
+    onFailed = { e: Throwable -> 
         
     }
-    
-    override fun onCanceled() {
+    onCanceled = {
         
     }
-    
-    override fun onProgress(loaded: Long, total: Long) {
+    onProgress = { loaded, total ->
         
     }
-})
+}
 ```
 
 For mutiple resources at once:
 
 ```kotlin
-resourceDownloader.download(urlList: List<String>, object : MutipleDownloadsCallback{
-    override fun onUrlSuccess(url: String) {
+resourceDownloader.download(urlList: List<String>){
+    onUrlSuccess = { url: String ->
         
     }
-    
-    override fun onUrlFailed(url: String, e: Throwable) {
+    onUrlFailed = { url: String, e: Throwable ->
         
     }
-    
-    override fun onUrlCanceled(url: String) {
+    onUrlCanceled = { url: String ->
         
     }
-    
-    override fun onProgress(progress: MutipleProgress) {   
+    onProgress = { progress: MultiProgress ->
         
     }
-})
+}
 ```
 
-To cancel a download task, simply use:
+To cancel  download task, simply use:
 
 ```kotlin
-resourceDownloader.cancel(url)
+resourceDownloader.cancel(url)    //cancel single download task
+
+resourceDownloader.cancel()     //cancel all download tasks
 ```
 
 Once you use `ResourceDownloader` to download resources from internet, the resource is cached by `CacheResourceWriter`. You can later use `CacheResourceReader`  to quickly get a copy of the resource from cache.

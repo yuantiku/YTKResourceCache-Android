@@ -1,14 +1,14 @@
 package com.fenbi.android.ytkresourcecache.downloader
 
 /**
- * Created by yangjw on 2019/1/21.
+ * Created by yangjw on 2019/1/22.
  */
-interface DownloadCallback {
-    fun onSuccess()
+class DownloadCallback {
+    var onSuccess: (() -> Unit)? = null
 
-    fun onFailed(e: Throwable)
+    var onFailed: ((e: Throwable) -> Unit)? = null
 
-    fun onCanceled()
+    var onCanceled: (() -> Unit)? = null
 
-    fun onProgress(loaded: Long, total: Long)
+    var onProgress: ((loaded: Long, total: Long) -> Unit)? = null
 }

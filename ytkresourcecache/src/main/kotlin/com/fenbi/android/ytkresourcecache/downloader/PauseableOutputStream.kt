@@ -31,10 +31,6 @@ class PauseableOutputStream(val path: String) : OutputStream() {
         tmpFile.renameTo(File(path))
     }
 
-    fun onCacheFailed() {
-        tmpFile.delete()
-    }
-
     override fun write(b: Int) {
         innerOutputStream.write(b)
     }
