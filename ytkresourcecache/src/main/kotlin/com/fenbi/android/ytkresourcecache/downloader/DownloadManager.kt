@@ -115,7 +115,9 @@ class DownloadManager(
             Log.d(TAG, "download $url")
             val file = cacheStorage.getCacheFile(url)
             if (skipExisting && file?.exists() == true && file.length() > 0) {
-                progressList[downloadIndex].total = file.length()
+                withContext(Dispatchers.Main){
+                    progressList[downloadIndex].total = file.length()
+                }
             } else {
                 try {
                     downloader.download(url)

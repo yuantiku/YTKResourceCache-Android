@@ -132,6 +132,7 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage) {
                 }
                 outputStream?.flush()
                 outputStream?.asResourceOutputStream()?.onCacheSuccess()
+                onProgress?.invoke(savedSize, totalLength)
                 onSuccess?.invoke(totalLength)
                 return true
             } catch (e: IOException) {
