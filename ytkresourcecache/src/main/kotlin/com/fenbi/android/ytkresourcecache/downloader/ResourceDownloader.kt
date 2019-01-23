@@ -4,30 +4,35 @@
  */
 package com.fenbi.android.ytkresourcecache.downloader
 
-import android.os.Environment
-import android.os.StatFs
 import android.util.Log
 import com.fenbi.android.ytkresourcecache.FileCacheStorage
 import com.fenbi.android.ytkresourcecache.asResourceOutputStream
 import okhttp3.*
+import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.CancellationException
 
 
-open class ResourceDownloader(private val cacheStorage: FileCacheStorage) {
+open class ResourceDownloader(private val cacheStorage: FileCacheStorage, private val okHttpClient: OkHttpClient) {
 
     protected var url: String? = null
     private var initialSize: Long = 0
     private var interrupted: Boolean = false
     private var totalFileSize = INVALID_FILE_SIZE
     private var outputStream: OutputStream? = null
+    private val downloadDir by lazy {
+        val file = File(cacheStorage.cacheDir)
+        if (!file.exists()){
+            file.mkdir()
+        }
+        return@lazy file
+    }
 
     var onDownloadedBytes: ((Long) -> Unit)? = null
     var onProgress: ((loaded: Long, total: Long) -> Unit)? = null
     var onSuccess: ((Long) -> Unit)? = null
     var onFailed: ((url: String?, errorType: ErrorType) -> Unit)? = null
-    var okHttpClient = defaultOkHttpClient
 
     fun getFileSize(url: String, callback: FileSizeCallback) {
         if (totalFileSize != INVALID_FILE_SIZE) {
@@ -150,6 +155,10 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage) {
         interrupted = true
     }
 
+    private fun checkSpace(): Boolean {
+        return downloadDir.usableSpace > 20 * 1024 * 1024
+    }
+
     interface FileSizeCallback {
 
         fun onFileSizeGot(fileSize: Long)
@@ -168,11 +177,6 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage) {
 
         const val TAG = "ResourceDownloader"
 
-        private val defaultOkHttpClient: OkHttpClient by lazy {
-            OkHttpClient.Builder()
-                .build()
-        }
-
         private fun parseInstanceLength(response: Response?): Long {
             var length = INVALID_FILE_SIZE
             if (response != null) {
@@ -186,11 +190,6 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage) {
 
             }
             return length
-        }
-
-        fun checkSpace(): Boolean {
-            val statFs = StatFs(Environment.getRootDirectory().absolutePath)
-            return statFs.availableBlocks * statFs.blockSize >= 20 * 1024 * 1024
         }
 
     }

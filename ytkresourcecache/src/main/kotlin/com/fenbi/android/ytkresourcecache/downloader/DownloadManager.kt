@@ -7,6 +7,7 @@ import com.fenbi.android.ytkresourcecache.FileCacheStorage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
+import okhttp3.OkHttpClient
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
@@ -18,6 +19,7 @@ import kotlin.concurrent.timer
 
 class DownloadManager(
     private val cacheStorage: FileCacheStorage,
+    private val httpClient: OkHttpClient = defaultOkHttpClient,
     private val skipExisting: Boolean = true,
     private val onSuccess: (() -> Unit)? = null,
     private val onFailed: ((Throwable) -> Unit)? = null,
@@ -83,7 +85,7 @@ class DownloadManager(
 
     private suspend fun runDownloads() = coroutineScope {
         repeat(THREADS) {
-            val downloader = ResourceDownloader(cacheStorage)
+            val downloader = ResourceDownloader(cacheStorage, httpClient)
             downloaders.add(downloader)
             launch(threadPool) {
                 runDownload(downloader)
@@ -155,6 +157,11 @@ class DownloadManager(
         private const val THREADS = 4
 
         const val TAG = "DownloadManager"
+
+        private val defaultOkHttpClient: OkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .build()
+        }
 
         private fun Long.readable(): String {
             var bytes = this
