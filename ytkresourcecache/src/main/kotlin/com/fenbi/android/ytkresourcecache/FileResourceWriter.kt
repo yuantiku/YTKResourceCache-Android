@@ -11,18 +11,7 @@ class FileResourceWriter(
 
     override fun getStream(url: String?): OutputStream? {
         if (url == null) return null
-        val cacheFilePath = mappingRule.mapUrlToPath(url)
-        val cacheFile = File(cacheDir, cacheFilePath)
-        try {
-            if (cacheFile.exists()) {
-                cacheFile.delete()
-            }
-            cacheFile.parentFile?.mkdirs()
-            cacheFile.createNewFile()
-            return FileOutputStream(cacheFile)
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        return null
+        val path = File(cacheDir, mappingRule.mapUrlToPath(url)).absolutePath
+        return ResourceOutputStream(path)
     }
 }

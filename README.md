@@ -38,56 +38,30 @@ interface CacheResourceWriter{
 
 `FileCacheStorage`  use `DefaultCacheResourceReader`  for reading cache and `FileResourceWriter`  for writing cache. The `DefaultCacheResourceReader` first looks up in the assets directory, then in the local cache directory, by a specific mapping rule that maps remote urls to local file paths.  The `FileResourceWriter` use disk file to store cache so make sure your application has `WRITE_EXTERNAL_STORAGE` permission.
 
-
-
 ### Resource download ability
 
-YTKResourceCache offers you the ability to download resource via internet, you can download file by url like this:
+YTKResourceCache offers you the ability to download resource via internet, you can download files by url like this:
 
 ```kotlin
-val url = "http://..."     // A url points to some resource
-val resourceDownloader = ResourceDownloader(cacheStorage.cacheWriter)
-resourceDownloader.download(url){
+val downloadMamager = DownloadManager(cacheStorage).apply{
     onSuccess = {
-        
+    
     }
-    onFailed = { e: Throwable -> 
-        
+    onFailed = { it:Throwable -> 
+    
     }
-    onCanceled = {
-        
-    }
-    onProgress = { loaded, total ->
+    onProgress = { progressList: List<Progress> ->
         
     }
 }
-```
-
-For mutiple resources at once:
-
-```kotlin
-resourceDownloader.download(urlList: List<String>){
-    onUrlSuccess = { url: String ->
-        
-    }
-    onUrlFailed = { url: String, e: Throwable ->
-        
-    }
-    onUrlCanceled = { url: String ->
-        
-    }
-    onProgress = { progress: MultiProgress ->
-        
-    }
-}
+val urlList = listOf("http://...", "http://...")
+downloadManager.startDownload(urlList)
 ```
 
 To cancel  download task, simply use:
 
 ```kotlin
-resourceDownloader.cancel(url)    //cancel single download task
-
-resourceDownloader.cancel()     //cancel all download tasks
+downloadManager.cancel()
 ```
 
-Once you use `ResourceDownloader` to download resources from internet, the resource is cached by `CacheResourceWriter`. You can later use `CacheResourceReader`  to quickly get a copy of the resource from cache.
+Once you use `DownloadManager` to download resources from internet, the resource is cached by `CacheStorage`. You can later use `CacheResourceReader`  to quickly get a copy of the resource from cache.

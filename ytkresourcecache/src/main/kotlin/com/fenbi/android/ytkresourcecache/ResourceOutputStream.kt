@@ -1,4 +1,4 @@
-package com.fenbi.android.ytkresourcecache.downloader
+package com.fenbi.android.ytkresourcecache
 
 import java.io.File
 import java.io.FileOutputStream
@@ -10,7 +10,7 @@ import java.io.OutputStream
 
 private fun String.tmp() = "$this-tmp"
 
-class PauseableOutputStream(val path: String) : OutputStream() {
+class ResourceOutputStream(val path: String) : OutputStream() {
 
     private val tmpFile by lazy {
         val file = File(path.tmp())
@@ -29,6 +29,10 @@ class PauseableOutputStream(val path: String) : OutputStream() {
 
     fun onCacheSuccess() {
         tmpFile.renameTo(File(path))
+    }
+
+    fun onCacheFailed() {
+        tmpFile.delete()
     }
 
     override fun write(b: Int) {
@@ -50,4 +54,8 @@ class PauseableOutputStream(val path: String) : OutputStream() {
     override fun close() {
         innerOutputStream.close()
     }
+}
+
+fun OutputStream.asResourceOutputStream(): ResourceOutputStream? {
+    return if (this is ResourceOutputStream) this else null
 }

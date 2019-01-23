@@ -1,168 +1,196 @@
+/*
+ * Copyright 2017 fenbi.com. All rights reserved.
+ * FENBI.COM PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+ */
 package com.fenbi.android.ytkresourcecache.downloader
 
-import com.fenbi.android.ytkresourcecache.CacheResourceWriter
+import android.os.Environment
+import android.os.StatFs
+import android.util.Log
+import com.fenbi.android.ytkresourcecache.FileCacheStorage
+import com.fenbi.android.ytkresourcecache.asResourceOutputStream
 import okhttp3.*
 import java.io.IOException
 import java.io.OutputStream
-import java.lang.IllegalStateException
-import java.lang.RuntimeException
+import java.util.concurrent.CancellationException
 
-/**
- * Created by yangjw on 2019/1/21.
- */
-class ResourceDownloader(
-    private val cacheWriter: CacheResourceWriter,
-    private val client: OkHttpClient = defaultOkHttpClient
-) {
 
-    private var callMap = hashMapOf<String, Call>()
+open class ResourceDownloader(private val cacheStorage: FileCacheStorage) {
 
-    fun download(url: String, callbackInit: (DownloadCallback.() -> Unit)? = null) {
-        var call = callMap[url]
-        if (call != null && !call.isCanceled) {
-            return
+    protected var url: String? = null
+    private var initialSize: Long = 0
+    private var interrupted: Boolean = false
+    private var totalFileSize = INVALID_FILE_SIZE
+    private var outputStream: OutputStream? = null
+
+    var onDownloadedBytes: ((Long) -> Unit)? = null
+    var onProgress: ((loaded: Long, total: Long) -> Unit)? = null
+    var onSuccess: ((Long) -> Unit)? = null
+    var onFailed: ((url: String?, errorType: ErrorType) -> Unit)? = null
+    var okHttpClient = defaultOkHttpClient
+
+    fun getFileSize(url: String, callback: FileSizeCallback) {
+        if (totalFileSize != INVALID_FILE_SIZE) {
+            callback.onFileSizeGot(totalFileSize)
         }
-        val callback = DownloadCallback().apply { callbackInit?.invoke(this) }
-        val outputStream = cacheWriter.getStream(url)
-        if (outputStream == null) {
-            callback.onFailed?.invoke(RuntimeException("verify file error."))
-            return
-        }
-        val builder = Request.Builder().url(url)
-        if (outputStream is PauseableOutputStream) {
-            builder.header("Range", "bytes=${outputStream.length()}-")
-        }
-        call = client.newCall(builder.build())
-        callMap[url] = call
+        val request = Request.Builder()
+            .url(url)
+            .header("Range", "bytes=0-5")
+            .build()
+        val call = okHttpClient.newCall(request)
         call.enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                val resourceInfo = ResourceInfo(url, response, outputStream, callback)
-                processResponse(resourceInfo)
-                callMap.remove(url)
+
+            override fun onFailure(call: Call?, e: IOException?) {
+                callback.onFileSizeGot(INVALID_FILE_SIZE)
             }
 
-            override fun onFailure(call: Call, e: IOException) {
-                callback.onFailed?.invoke(e)
-                callMap.remove(url)
+            @Throws(IOException::class)
+            override fun onResponse(call: Call?, response: Response?) {
+                totalFileSize = parseInstanceLength(response)
+                callback.onFileSizeGot(totalFileSize)
             }
         })
     }
 
-    fun download(urlList: List<String>, callbackInit: (MultiDownloadCallback.() -> Unit)? = null) {
-        val multiDownloadCallback = MultiDownloadCallback().apply { callbackInit?.invoke(this) }
-        val multiProgress = MultiProgress(urlList, hashMapOf())
-        urlList.distinct().forEach {
-            download(it) {
-                onSuccess = {
-                    multiDownloadCallback.onUrlSuccess?.invoke(it)
-                }
-
-                onFailed = { e: Throwable ->
-                    multiDownloadCallback.onUrlFailed?.invoke(it, e)
-                }
-
-                onCanceled = {
-                    multiDownloadCallback.onUrlCanceled?.invoke(it)
-                }
-
-                onProgress = { loaded, total ->
-                    multiProgress.progressMap[it] = Pair(loaded, total)
-                    multiDownloadCallback.onProgress?.invoke(multiProgress)
+    fun download(url: String) {
+        val call = buildDownloadCall(url) ?: return
+        try {
+            val response = call.execute()
+            if (!processResponse(response)) {
+                if (interrupted) {
+                    throw CancellationException()
+                } else {
+                    throw Exception()
                 }
             }
+        } catch (e: Throwable) {
+            throw e
         }
     }
 
-    fun cancel(url: String? = null) {
-        val runningCalls = client.dispatcher().runningCalls()
-        if (url != null) {
-            val call = callMap[url] ?: return
-            call.cancel()
-            if (!runningCalls.contains(call)) {
-                callMap.remove(url)
-            }
-        } else {
-            //cancel all download task
-            callMap.forEach { it.value.cancel() }
-            with(callMap.iterator()) {
-                while (hasNext()) {
-                    if (!runningCalls.contains(next().value)) {
-                        remove()
-                    }
-                }
-            }
-        }
+    private fun buildDownloadCall(url: String): Call? {
+        this.url = url
+        interrupted = false
+        outputStream = cacheStorage.cacheWriter.getStream(url)
+        initialSize = outputStream?.asResourceOutputStream()?.length() ?: 0L
+        val request = Request.Builder()
+            .url(url)
+            .header("Range", "bytes=$initialSize-")
+            .build()
+        return okHttpClient.newCall(request)
     }
 
-    private fun processResponse(resourceInfo: ResourceInfo): Boolean {
-        with(resourceInfo) {
+    private fun processResponse(response: Response): Boolean {
+        response.use {
+            if (interrupted) {
+                onFailed?.invoke(url, ErrorType.TaskCancelled)
+                return false
+            }
+            if (outputStream == null) {
+                onFailed?.invoke(url, ErrorType.FileVerifyError)
+                return false
+            }
             if (!response.isSuccessful) {
-                callback.onFailed?.invoke(IllegalStateException("HTTP response code is ${response.code()}"))
+                // delete temp file to restart from beginning at the next time.
+                outputStream?.asResourceOutputStream()?.onCacheFailed()
+                onFailed?.invoke(url, ErrorType.NetworkError)
                 return false
             }
-            val totalLength = parseResourceLength(response)
-            val body = response.body()
-            if (body == null) {
-                callback.onFailed?.invoke(IllegalStateException("Response body is null."))
+            if (!checkSpace()) {
+                onFailed?.invoke(url, ErrorType.FullDiskError)
                 return false
             }
+            val totalLength = parseInstanceLength(response)
+            val body = response.body() ?: return false
             val inputStream = body.byteStream()
-            var timestamp = System.currentTimeMillis()
-            var currentSize = if (outputStream is PauseableOutputStream) outputStream.length() else 0
-            val buffer = ByteArray(4096)
-            var len: Int
             try {
+                var timestamp = System.currentTimeMillis()
+                var savedSize = initialSize
+                val buffer = ByteArray(4096)
+                var len: Int
                 while (true) {
-                    if (callMap[url]?.isCanceled == true) {
-                        callback.onCanceled?.invoke()
-                        return false
-                    }
                     len = inputStream.read(buffer)
                     if (len == -1) {
                         break
                     }
-                    outputStream.write(buffer, 0, len)
-                    currentSize += len.toLong()
+                    onDownloadedBytes?.invoke(len.toLong())
+                    outputStream?.write(buffer, 0, len)
+                    savedSize += len.toLong()
                     if (System.currentTimeMillis() - timestamp > 300L) {
                         timestamp = System.currentTimeMillis()
-                        callback.onProgress?.invoke(currentSize, totalLength)
+                        onProgress?.invoke(savedSize, totalLength)
+                    }
+                    if (interrupted) {
+                        onFailed?.invoke(url, ErrorType.TaskCancelled)
+                        return false
                     }
                 }
-                outputStream.flush()
-                if (outputStream is PauseableOutputStream) outputStream.onCacheSuccess()
-                callback.onProgress?.invoke(totalLength, totalLength)
-                callback.onSuccess?.invoke()
+                if (savedSize != totalLength) {
+                    Log.e(TAG, "file size not match, header $totalLength, download $savedSize")
+                    onFailed?.invoke(url, ErrorType.FileVerifyError)
+                    return false
+                }
+                outputStream?.flush()
+                outputStream?.asResourceOutputStream()?.onCacheSuccess()
+                onSuccess?.invoke(totalLength)
                 return true
             } catch (e: IOException) {
-                callback.onFailed?.invoke(e)
+                outputStream?.asResourceOutputStream()?.onCacheFailed()
+                onFailed?.invoke(url, ErrorType.NetworkError)
+                throw e
             } finally {
                 inputStream.close()
-                outputStream.close()
-                response.close()
+                outputStream?.close()
             }
         }
-        return false
     }
 
-    private fun parseResourceLength(response: Response?): Long {
-        var length = -1L
-        if (response != null) {
-            val range = response.header("Content-Range") ?: return -1L
-            try {
-                val section = range.split("/").dropLastWhile { it.isEmpty() }.toTypedArray()
-                length = section[1].toLong()
-            } catch (e: NumberFormatException) {
-                e.printStackTrace()
-            }
+    fun pause() {
+        interrupted = true
+    }
 
+    interface FileSizeCallback {
+
+        fun onFileSizeGot(fileSize: Long)
+    }
+
+    enum class ErrorType {
+        NetworkError,
+        TaskCancelled,
+        FullDiskError,
+        FileVerifyError
+    }
+
+    companion object {
+
+        private const val INVALID_FILE_SIZE = -1L
+
+        const val TAG = "ResourceDownloader"
+
+        private val defaultOkHttpClient: OkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .build()
         }
-        return length
-    }
 
-    internal data class ResourceInfo(
-        val url: String,
-        val response: Response,
-        val outputStream: OutputStream,
-        val callback: DownloadCallback
-    )
+        private fun parseInstanceLength(response: Response?): Long {
+            var length = INVALID_FILE_SIZE
+            if (response != null) {
+                val range = response.header("Content-Range") ?: return -1L
+                try {
+                    val section = range.split("/").dropLastWhile { it.isEmpty() }.toTypedArray()
+                    length = section[1].toLong()
+                } catch (e: NumberFormatException) {
+                    e.printStackTrace()
+                }
+
+            }
+            return length
+        }
+
+        fun checkSpace(): Boolean {
+            val statFs = StatFs(Environment.getRootDirectory().absolutePath)
+            return statFs.availableBlocks * statFs.blockSize >= 20 * 1024 * 1024
+        }
+
+    }
 }
