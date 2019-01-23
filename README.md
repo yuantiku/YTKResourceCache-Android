@@ -43,17 +43,17 @@ interface CacheResourceWriter{
 YTKResourceCache offers you the ability to download resource via internet, you can download files by url like this:
 
 ```kotlin
-val downloadMamager = DownloadManager(cacheStorage).apply{
+val downloadMamager = DownloadManager(cacheStorage,
     onSuccess = {
     
-    }
+    },
     onFailed = { it:Throwable -> 
     
-    }
+    },
     onProgress = { progressList: List<Progress> ->
         
     }
-}
+)
 val urlList = listOf("http://...", "http://...")
 downloadManager.startDownload(urlList)
 ```

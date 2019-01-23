@@ -17,8 +17,10 @@ import kotlin.concurrent.timer
  */
 
 class DownloadManager(
-    private val cacheStorage: FileCacheStorage, private val skipExisting: Boolean = true,
-    private val onSuccess: (() -> Unit)? = null, private val onFailed: ((Throwable) -> Unit)? = null,
+    private val cacheStorage: FileCacheStorage,
+    private val skipExisting: Boolean = true,
+    private val onSuccess: (() -> Unit)? = null,
+    private val onFailed: ((Throwable) -> Unit)? = null,
     private val onProgress: ((List<Progress>) -> Unit)? = null,
     private val onSpeedUpdate: ((String) -> Unit)? = null
 ) {
