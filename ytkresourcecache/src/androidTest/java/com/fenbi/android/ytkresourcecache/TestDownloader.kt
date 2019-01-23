@@ -37,7 +37,7 @@ class TestDownloader {
             "https://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(34).jpg"
         )
         val future = CompletableFuture<Long>()
-        val downlaodManager = DownloadManager(cacheStorage, false,
+        val downlaodManager = DownloadManager(cacheStorage, skipExisting = false,
             onFailed = {
                 throw it
             }

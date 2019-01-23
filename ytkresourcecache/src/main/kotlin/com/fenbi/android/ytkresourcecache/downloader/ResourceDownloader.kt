@@ -7,11 +7,11 @@ package com.fenbi.android.ytkresourcecache.downloader
 import android.util.Log
 import com.fenbi.android.ytkresourcecache.FileCacheStorage
 import com.fenbi.android.ytkresourcecache.asResourceOutputStream
+import kotlinx.coroutines.CancellationException
 import okhttp3.*
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
-import java.util.concurrent.CancellationException
 
 
 open class ResourceDownloader(private val cacheStorage: FileCacheStorage, private val okHttpClient: OkHttpClient) {
@@ -24,7 +24,7 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage, privat
     private val downloadDir by lazy {
         val file = File(cacheStorage.cacheDir)
         if (!file.exists()){
-            file.mkdir()
+            file.mkdirs()
         }
         return@lazy file
     }
