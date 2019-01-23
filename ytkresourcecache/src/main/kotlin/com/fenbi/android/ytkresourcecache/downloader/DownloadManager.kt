@@ -16,7 +16,12 @@ import kotlin.concurrent.timer
  * @author zheng on 11/26/18
  */
 
-class DownloadManager(private val cacheStorage: FileCacheStorage, private val skipExisting: Boolean = true) {
+class DownloadManager(
+    private val cacheStorage: FileCacheStorage, private val skipExisting: Boolean = true,
+    private val onSuccess: (() -> Unit)? = null, private val onFailed: ((Throwable) -> Unit)? = null,
+    private val onProgress: ((List<Progress>) -> Unit)? = null,
+    private val onSpeedUpdate: ((String) -> Unit)? = null
+) {
 
     private lateinit var resourceUrls: List<String>
     private lateinit var progressList: List<Progress>
@@ -30,15 +35,10 @@ class DownloadManager(private val cacheStorage: FileCacheStorage, private val sk
     private lateinit var channel: ReceiveChannel<IndexedValue<String>>
     private val uiHandler = Handler(Looper.getMainLooper())
 
-    var onSpeedUpdate: ((String) -> Unit)? = null
-    var onProgress: ((List<Progress>) -> Unit)? = null
-    var onSuccess: (() -> Unit)? = null
-    var onFailed: ((Throwable) -> Unit)? = null
-
     fun startDownload(urls: List<String>) {
         resourceUrls = urls
         isDownloading = true
-        progressList = List(urls.size) { Progress(urls[it]) }
+        progressList = urls.map { Progress(it) }
         downloadedCount = 0
         downloaders.clear()
         downloadSize.set(0L)
@@ -145,14 +145,7 @@ class DownloadManager(private val cacheStorage: FileCacheStorage, private val sk
         onProgress?.invoke(progressList)
     }
 
-    class Progress(val url: String) {
-        var loaded: Long = 0
-        var total: Long = 0
-
-        override fun toString(): String {
-            return "Progress(url='$url', loaded=$loaded, total=$total)"
-        }
-    }
+    data class Progress(val url: String, var loaded: Long = 0L, var total: Long = 0L)
 
     companion object {
         private const val THREADS = 4

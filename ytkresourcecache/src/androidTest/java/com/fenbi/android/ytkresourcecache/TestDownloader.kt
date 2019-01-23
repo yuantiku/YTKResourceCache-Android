@@ -37,21 +37,21 @@ class TestDownloader {
             "https://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(34).jpg"
         )
         val future = CompletableFuture<Long>()
-        val downlaodManager = DownloadManager(cacheStorage, false).apply {
+        val downlaodManager = DownloadManager(cacheStorage, false,
             onFailed = {
                 throw it
             }
-
+            ,
             onSuccess = {
                 Log.w("testDownloadManager", "onSuccess")
                 val sum = urlList.map { cacheStorage.getCacheFile(it)?.length() ?: 0L }.sum()
                 future.complete(sum)
             }
-
+            ,
             onProgress = { progressList ->
                 Log.w("testDownloadManager", "progressList = $progressList")
             }
-        }
+        )
         downlaodManager.startDownload(urlList)
         assertEquals(future.get(60, TimeUnit.SECONDS), 413005 + 297010 + 240075)
     }
