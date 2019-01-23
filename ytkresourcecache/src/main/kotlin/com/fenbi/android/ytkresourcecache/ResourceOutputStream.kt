@@ -22,7 +22,7 @@ class ResourceOutputStream(val path: String) : OutputStream() {
     }
 
     private val innerOutputStream by lazy {
-        FileOutputStream(tmpFile)
+        FileOutputStream(tmpFile, true)
     }
 
     fun length(): Long = tmpFile.length()
