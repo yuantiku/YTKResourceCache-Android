@@ -9,7 +9,7 @@ A cache library that works with [YTKWebView](https://github.com/yuantiku/YTKWebV
 ```kotlin
 val cacheStorage = FileCacheStorage(
     context,
-    mappingRule = DefaultMappingRule(),
+    mappingRule = MappingRule.Default,
     cacheDir = context.getCacheDir().getAbsolutePath(),
 )
 
@@ -43,25 +43,25 @@ interface CacheResourceWriter{
 YTKResourceCache offers you the ability to download resource via internet, you can download files by url like this:
 
 ```kotlin
-val downloadMamager = DownloadManager(cacheStorage,
+val urlList = listOf("http://...", "http://...")
+val downloadTask = DownloadTask(urlList, cacheStorage,
     onSuccess = {
-    
+
     },
     onFailed = { it:Throwable -> 
-    
+
     },
     onProgress = { progressList: List<Progress> ->
-        
+
     }
 )
-val urlList = listOf("http://...", "http://...")
-downloadManager.startDownload(urlList)
+downloadTask.start()
 ```
 
 To cancel  download task, simply use:
 
 ```kotlin
-downloadManager.cancel()
+downloadTask.cancel()
 ```
 
-Once you use `DownloadManager` to download resources from internet, the resource is cached by `CacheStorage`. You can later use `CacheResourceReader`  to quickly get a copy of the resource from cache.
+Once you use `DownloadTask` to download resources from internet, the resource is cached by `CacheStorage`. You can later use `CacheResourceReader`  to quickly get a copy of the resource from cache.

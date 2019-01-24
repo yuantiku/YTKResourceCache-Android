@@ -5,13 +5,11 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.rule.GrantPermissionRule
 import android.support.test.runner.AndroidJUnit4
 import android.util.Log
-import com.fenbi.android.ytkresourcecache.downloader.DownloadManager
+import com.fenbi.android.ytkresourcecache.downloader.DownloadTask
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
-import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -37,7 +35,7 @@ class TestDownloader {
             "https://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(34).jpg"
         )
         val future = CompletableFuture<Long>()
-        val downlaodManager = DownloadManager(cacheStorage, skipExisting = false,
+        val downlaodManager = DownloadTask(urlList, cacheStorage, skipExisting = false,
             onFailed = {
                 throw it
             }
@@ -52,7 +50,7 @@ class TestDownloader {
                 Log.w("testDownloadManager", "progressList = $progressList")
             }
         )
-        downlaodManager.startDownload(urlList)
+        downlaodManager.start()
         assertEquals(future.get(60, TimeUnit.SECONDS), 413005 + 297010 + 240075)
     }
 }

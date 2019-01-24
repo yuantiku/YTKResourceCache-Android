@@ -17,7 +17,8 @@ import kotlin.concurrent.timer
  * @author zheng on 11/26/18
  */
 
-class DownloadManager(
+class DownloadTask(
+    private val resourceUrls: List<String>,
     private val cacheStorage: FileCacheStorage,
     private val httpClient: OkHttpClient = defaultOkHttpClient,
     private val skipExisting: Boolean = true,
@@ -27,7 +28,6 @@ class DownloadManager(
     private val onSpeedUpdate: ((String) -> Unit)? = null
 ) {
 
-    private lateinit var resourceUrls: List<String>
     private lateinit var progressList: List<Progress>
     var isDownloading = false
     private var downloadedCount: Int = 0
@@ -39,10 +39,12 @@ class DownloadManager(
     private lateinit var channel: ReceiveChannel<IndexedValue<String>>
     private val uiHandler = Handler(Looper.getMainLooper())
 
-    fun startDownload(urls: List<String>) {
-        resourceUrls = urls
+    fun start() {
+        if (isDownloading) {
+            return
+        }
         isDownloading = true
-        progressList = urls.map { Progress(it) }
+        progressList = resourceUrls.map { Progress(it) }
         downloadedCount = 0
         downloaders.clear()
         downloadSize.set(0L)
@@ -77,7 +79,7 @@ class DownloadManager(
                 }
                 return@launch
             } finally {
-                this@DownloadManager.cancel()
+                this@DownloadTask.cancel()
             }
             onSuccess?.invoke()
         }
@@ -117,7 +119,7 @@ class DownloadManager(
             Log.d(TAG, "download $url")
             val file = cacheStorage.getCacheFile(url)
             if (skipExisting && file?.exists() == true && file.length() > 0) {
-                withContext(Dispatchers.Main){
+                withContext(Dispatchers.Main) {
                     progressList[downloadIndex].total = file.length()
                 }
             } else {
@@ -156,7 +158,7 @@ class DownloadManager(
     companion object {
         private const val THREADS = 4
 
-        const val TAG = "DownloadManager"
+        const val TAG = "DownloadTask"
 
         private val defaultOkHttpClient: OkHttpClient by lazy {
             OkHttpClient.Builder()
