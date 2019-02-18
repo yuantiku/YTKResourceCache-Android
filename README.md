@@ -2,6 +2,8 @@
 
 A cache library that works with [YTKWebView](https://github.com/yuantiku/YTKWebView-Android). You can also use it without YTKWebView to load the cache resources separately.
 
+[中文说明](https://github.com/yuantiku/YTKResourceCache-Android/blob/master/README-CHINESE.md)
+
 ## Usage
 
 ### Resource cache ability
