@@ -10,7 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
@@ -34,7 +34,8 @@ class TestDownloader {
             "http://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(41).jpg",
             "https://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(34).jpg"
         )
-        val future = CompletableFuture<Long>()
+        val countDownLatch = CountDownLatch(1)
+        var size: Long = 0
         val downlaodManager = DownloadTask(urlList, cacheStorage, skipExisting = false,
             onFailed = {
                 throw it
@@ -43,7 +44,8 @@ class TestDownloader {
             onSuccess = {
                 Log.w("testDownloadManager", "onSuccess")
                 val sum = urlList.map { cacheStorage.getCacheFile(it)?.length() ?: 0L }.sum()
-                future.complete(sum)
+                size = sum
+                countDownLatch.countDown()
             }
             ,
             onProgress = { progressList ->
@@ -51,6 +53,7 @@ class TestDownloader {
             }
         )
         downlaodManager.start()
-        assertEquals(future.get(60, TimeUnit.SECONDS), 413005 + 297010 + 240075)
+        countDownLatch.await(60, TimeUnit.SECONDS)
+        assertEquals(size, 413005 + 297010 + 240075)
     }
 }
