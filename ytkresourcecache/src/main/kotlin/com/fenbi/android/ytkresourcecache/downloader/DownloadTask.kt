@@ -142,6 +142,9 @@ class DownloadTask(
         timer = timer(period = 500) {
             uiHandler.post {
                 val dur = System.currentTimeMillis() - downloadTimeStart
+                if (dur == 0L) {
+                    return@post
+                }
                 val speed = downloadSize.getAndSet(0L) * 1000L / dur
                 downloadTimeStart = System.currentTimeMillis()
                 onSpeedUpdate?.invoke(speed.readable() + "B/s")
