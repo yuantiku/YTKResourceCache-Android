@@ -132,6 +132,7 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage, privat
                 }
                 if (savedSize != totalLength) {
                     Log.e(TAG, "file size not match, header $totalLength, download $savedSize")
+                    outputStream?.asResourceOutputStream()?.onCacheFailed()
                     onFailed?.invoke(url, ErrorType.FileVerifyError)
                     return false
                 }
