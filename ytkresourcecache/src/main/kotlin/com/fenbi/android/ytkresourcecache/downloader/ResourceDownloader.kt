@@ -12,6 +12,7 @@ import okhttp3.*
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.lang.IllegalStateException
 
 
 open class ResourceDownloader(private val cacheStorage: FileCacheStorage, private val okHttpClient: OkHttpClient) {
@@ -62,11 +63,7 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage, privat
         try {
             val response = call.execute()
             if (!processResponse(response)) {
-                if (interrupted) {
-                    throw CancellationException()
-                } else {
-                    throw Exception()
-                }
+                throw CancellationException()
             }
         } catch (e: Throwable) {
             throw e
@@ -93,20 +90,20 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage, privat
             }
             if (outputStream == null) {
                 onFailed?.invoke(url, ErrorType.FileVerifyError)
-                return false
+                throw IllegalStateException("outputStream is null")
             }
             if (!response.isSuccessful) {
                 // delete temp file to restart from beginning at the next time.
                 outputStream?.asResourceOutputStream()?.onCacheFailed()
                 onFailed?.invoke(url, ErrorType.NetworkError)
-                return false
+                throw IllegalStateException("response is not success, response: $response")
             }
             if (!checkSpace()) {
                 onFailed?.invoke(url, ErrorType.FullDiskError)
-                return false
+                throw IllegalStateException("no enough disk space, available space:${downloadDir.usableSpace}")
             }
             val totalLength = parseInstanceLength(response)
-            val body = response.body() ?: return false
+            val body = response.body() ?: throw IllegalStateException("response body is null, response: $response")
             val inputStream = body.byteStream()
             try {
                 var timestamp = System.currentTimeMillis()
@@ -134,14 +131,14 @@ open class ResourceDownloader(private val cacheStorage: FileCacheStorage, privat
                     Log.e(TAG, "file size not match, header $totalLength, download $savedSize")
                     outputStream?.asResourceOutputStream()?.onCacheFailed()
                     onFailed?.invoke(url, ErrorType.FileVerifyError)
-                    return false
+                    throw IllegalStateException("file size not match, header $totalLength, download $savedSize, response:$response")
                 }
                 outputStream?.flush()
                 outputStream?.asResourceOutputStream()?.onCacheSuccess()
                 onProgress?.invoke(savedSize, totalLength)
                 onSuccess?.invoke(totalLength)
                 return true
-            } catch (e: IOException) {
+            } catch (e: Throwable) {
                 outputStream?.asResourceOutputStream()?.onCacheFailed()
                 onFailed?.invoke(url, ErrorType.NetworkError)
                 throw e
