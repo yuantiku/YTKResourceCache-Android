@@ -26,7 +26,7 @@ class TestCacheStorage {
     val content = "hello world!"
 
     val cacheStorage by lazy {
-        FileCacheStorage(InstrumentationRegistry.getContext())
+        FileCacheStorage(InstrumentationRegistry.getInstrumentation().context)
     }
 
     @Test

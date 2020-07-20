@@ -18,7 +18,7 @@ class TestAssetsResourceReader {
     @Test
     fun test() {
         val assetsReader = AssetsResourceReader(
-            InstrumentationRegistry.getContext(), "cache",
+            InstrumentationRegistry.getInstrumentation().context, "cache",
             object : MappingRule {
                 override fun mapUrlToPath(url: String): String {
                     return url
