@@ -1,7 +1,7 @@
 package com.fenbi.android.ytkresourcecache
 
-import android.support.test.InstrumentationRegistry
-import android.support.test.runner.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -17,7 +17,8 @@ class TestAssetsResourceReader {
 
     @Test
     fun test() {
-        val assetsReader = AssetsResourceReader(InstrumentationRegistry.getContext(), "cache",
+        val assetsReader = AssetsResourceReader(
+            InstrumentationRegistry.getContext(), "cache",
             object : MappingRule {
                 override fun mapUrlToPath(url: String): String {
                     return url
