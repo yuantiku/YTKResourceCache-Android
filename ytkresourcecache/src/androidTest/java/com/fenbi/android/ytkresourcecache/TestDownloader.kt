@@ -25,14 +25,14 @@ class TestDownloader {
         , Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
 
-    val cacheStorage by lazy { FileCacheStorage(InstrumentationRegistry.getContext()) }
+    val cacheStorage by lazy { FileCacheStorage(InstrumentationRegistry.getInstrumentation().context) }
 
     @Test
     fun testDownloadManager() {
         val urlList = listOf(
-            "http://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(43).jpg",
-            "http://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(41).jpg",
-            "https://t2.hddhhn.com/uploads/tu/201812/621/640.webp%20(34).jpg"
+            "http://img3.doubanio.com/view/photo/r/public/p480747492.jpg",
+            "http://img3.doubanio.com/view/photo/r/public/p2561716440.jpg",
+            "http://img3.doubanio.com/view/photo/r/public/p2500944103.jpg"
         )
         val countDownLatch = CountDownLatch(1)
         var size: Long = 0
@@ -54,6 +54,6 @@ class TestDownloader {
         )
         downlaodManager.start()
         countDownLatch.await(60, TimeUnit.SECONDS)
-        assertEquals(size, 413005 + 297010 + 240075)
+        assertEquals(size, 1098564 + 158893 + 382663)
     }
 }
